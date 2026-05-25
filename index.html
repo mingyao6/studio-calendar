@@ -55,7 +55,7 @@ html, body { font-family: var(--sans); background: var(--white); color: var(--te
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
 
 .day-cell {
-  height: 88px; overflow: hidden;
+  height: 106px; overflow: hidden;
   border: 1px solid transparent; border-radius: var(--radius-md);
   cursor: pointer; display: flex; flex-direction: row; align-items: stretch;
   transition: background 0.15s, border-color 0.15s;
@@ -144,6 +144,8 @@ html, body { font-family: var(--sans); background: var(--white); color: var(--te
 .bb-time { font-size: 9px; font-weight: 500; color: var(--booked-dot); letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
 .bb-name { font-family: var(--serif); font-size: 14px; font-weight: 300; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bb-service { font-size: 8.5px; font-weight: 400; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+.bb-location { font-size: 8.5px; font-weight: 400; color: var(--hint); letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; display: flex; align-items: center; gap: 3px; }
+.bb-location::before { content: '📍'; font-size: 8px; }
 
 /* Available */
 .avail-state { padding: 20px 28px 36px; display: flex; flex-direction: column; gap: 6px; }
@@ -152,7 +154,7 @@ html, body { font-family: var(--sans); background: var(--white); color: var(--te
 
 /* Mobile */
 @media (max-width: 480px) {
-  .day-cell { height: 64px; }
+  .day-cell { height: 77px; }
   .day-bar { width: 3px; margin: 4px 0 4px 3px; }
   .day-content { padding: 5px 2px 4px; }
   .header { padding: 28px 18px 16px; }
@@ -232,7 +234,7 @@ html, body { font-family: var(--sans); background: var(--white); color: var(--te
 // ═══════════════════════════════════════════════════════════
 const DAY_START_HOUR = 8;
 const DAY_END_HOUR   = 20;
-const HOUR_H         = 44;
+const HOUR_H         = 53;
 // ═══════════════════════════════════════════════════════════
 
 const LAT = 42.3601, LON = -71.0589;
@@ -502,11 +504,13 @@ function buildTimeGrid(bookings, hourly) {
     const endStr    = endDate ? endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
     const timeRange = endStr ? `${startStr} – ${endStr}` : startStr;
     const svc = svcName(b.service);
+    const loc = b.location ? (typeof b.location === 'object' ? b.location.name : b.location) : '';
     return `<div class="booking-block" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;">
       <div class="bb-header">
         <span class="bb-time">${timeRange}</span>
         <span class="bb-name">${b.name}</span>
         ${svc ? `<span class="bb-service">${svc}</span>` : ''}
+        ${loc ? `<span class="bb-location">${loc}</span>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -548,6 +552,8 @@ let ty0 = 0;
 const sheet = document.getElementById('day-sheet');
 sheet.addEventListener('touchstart', e => { ty0 = e.touches[0].clientY; }, { passive: true });
 sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - ty0 > 55) closeSheet(); }, { passive: true });
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && activeDay) closeSheet(); });
 
 loadAll();
 </script>
