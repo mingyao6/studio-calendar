@@ -140,12 +140,12 @@ html, body { font-family: var(--sans); background: var(--white); color: var(--te
   overflow: hidden;
   z-index: 2;
 }
-.bb-header { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; line-height: 1.2; }
+.bb-header { display: flex; flex-direction: column; gap: 1px; line-height: 1.2; }
+.bb-top-row { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
 .bb-time { font-size: 9px; font-weight: 500; color: var(--booked-dot); letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
 .bb-name { font-family: var(--serif); font-size: 14px; font-weight: 300; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.bb-service { font-size: 8.5px; font-weight: 400; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
-.bb-location { font-size: 8.5px; font-weight: 400; color: var(--hint); letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; display: flex; align-items: center; gap: 3px; }
-.bb-location::before { content: '📍'; font-size: 8px; }
+.bb-service { font-size: 8.5px; font-weight: 400; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+.bb-location { font-size: 8.5px; font-weight: 400; color: var(--hint); letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
 /* Available */
 .avail-state { padding: 20px 28px 36px; display: flex; flex-direction: column; gap: 6px; }
@@ -355,6 +355,8 @@ async function fetchBookings(force) {
       if (!byDate[dk]) byDate[dk] = [];
       const startHour = toETHour(rec.fields['Date']);
       const durSecs   = rec.fields['Duration'] || 0;
+      // Debug: log raw field shapes once
+      if (!byDate[dk].length) console.log('Airtable fields sample:', JSON.stringify(rec.fields));
       byDate[dk].push({
         name: rec.fields['Payee Name'] || '—',
         date: rec.fields['Date'],
@@ -504,13 +506,18 @@ function buildTimeGrid(bookings, hourly) {
     const endStr    = endDate ? endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
     const timeRange = endStr ? `${startStr} – ${endStr}` : startStr;
     const svc = svcName(b.service);
-    const loc = b.location ? (typeof b.location === 'object' ? b.location.name : b.location) : '';
+    const rawLoc = b.location;
+    const loc = Array.isArray(rawLoc)
+      ? rawLoc.map(l => typeof l === 'object' ? (l.name || l.value || '') : l).filter(Boolean).join(', ')
+      : (rawLoc && typeof rawLoc === 'object' ? (rawLoc.name || rawLoc.value || '') : (rawLoc || ''));
     return `<div class="booking-block" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;">
       <div class="bb-header">
-        <span class="bb-time">${timeRange}</span>
-        <span class="bb-name">${b.name}</span>
+        <div class="bb-top-row">
+          <span class="bb-time">${timeRange}</span>
+          <span class="bb-name">${b.name}</span>
+        </div>
         ${svc ? `<span class="bb-service">${svc}</span>` : ''}
-        ${loc ? `<span class="bb-location">${loc}</span>` : ''}
+        ${loc ? `<span class="bb-location">📍 ${loc}</span>` : ''}
       </div>
     </div>`;
   }).join('');
