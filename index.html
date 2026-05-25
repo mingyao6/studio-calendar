@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Studio Calendar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --stone: #f3f1ee;
+  --border: #e8e4df;
+  --border2: #d5cfc8;
+  --text: #1a1916;
+  --muted: #7d7870;
+  --hint: #b0a99f;
+  --booked-bg: #f7f4f0;
+  --booked-border: #c9c0b5;
+  --booked-dot: #8b7355;
+  --today-bg: #f2e4e1;
+  --today-border: #d9b8b2;
+  --today-text: #7a3f38;
+  --today-sub: #a8625a;
+  --bar-fill-booked: #b09880;
+  --serif: 'Cormorant Garamond', Georgia, serif;
+  --sans: 'Jost', system-ui, sans-serif;
+  --radius-md: 4px;
+}
+
+html, body { font-family: var(--sans); background: var(--white); color: var(--text); min-height: 100dvh; -webkit-font-smoothing: antialiased; }
+.app { max-width: 680px; margin: 0 auto; background: var(--white); min-height: 100dvh; }
+
+/* ── Header ── */
+.header { padding: 36px 28px 20px; border-bottom: 1px solid var(--border); }
+.header-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+.studio-label { font-size: 10px; font-weight: 400; letter-spacing: 0.18em; text-transform: uppercase; color: var(--hint); margin-bottom: 4px; }
+.month-heading { font-family: var(--serif); font-size: 38px; font-weight: 300; letter-spacing: -0.01em; color: var(--text); line-height: 1; }
+.month-heading em { font-style: italic; }
+.header-actions { display: flex; gap: 8px; align-items: center; padding-top: 8px; }
+.icon-btn { background: none; border: 1px solid var(--border2); border-radius: var(--radius-md); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); transition: all 0.2s; flex-shrink: 0; }
+.icon-btn:hover { background: var(--stone); color: var(--text); }
+.month-nav { display: flex; align-items: center; border: 1px solid var(--border2); border-radius: var(--radius-md); overflow: hidden; }
+.month-nav button { background: none; border: none; padding: 8px 13px; cursor: pointer; color: var(--muted); font-size: 15px; transition: all 0.15s; line-height: 1; display: flex; align-items: center; }
+.month-nav button:hover { background: var(--stone); color: var(--text); }
+.month-nav .sep { width: 1px; background: var(--border2); height: 20px; }
+.location-row { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--hint); letter-spacing: 0.06em; }
+
+/* ── Calendar ── */
+.cal-wrap { padding: 24px 20px 16px; }
+.dow-row { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 8px; gap: 3px; }
+.dow-label { text-align: center; font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--hint); padding: 4px 0; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+
+.day-cell {
+  height: 88px; overflow: hidden;
+  border: 1px solid transparent; border-radius: var(--radius-md);
+  cursor: pointer; display: flex; flex-direction: row; align-items: stretch;
+  transition: background 0.15s, border-color 0.15s;
+  background: transparent; min-width: 0; position: relative;
+}
+.day-cell:hover { background: var(--stone); border-color: var(--border); }
+.day-cell.empty { cursor: default; pointer-events: none; background: transparent !important; border-color: transparent !important; }
+.day-cell.is-today { background: var(--today-bg); border-color: var(--today-border); }
+.day-cell.is-today:hover { background: #eedad6; }
+.day-cell.is-today .day-num { color: var(--today-text); font-weight: 500; }
+.day-cell.is-today .wx-temp { color: var(--today-sub); }
+.day-cell.is-today .client-name { color: var(--today-sub); }
+.day-cell.is-today .client-time { color: var(--today-sub); opacity: 0.75; }
+.day-cell.is-today .multi-badge { color: var(--today-sub); opacity: 0.7; }
+.day-cell.is-today .day-bar-track { background: rgba(122,63,56,0.15); }
+.day-cell.is-today .day-bar-seg { background: var(--today-sub); }
+.day-cell.has-booking { background: var(--booked-bg); border-color: var(--booked-border); }
+.day-cell.has-booking:hover { background: #f0ece6; }
+.day-cell.is-today.has-booking { background: var(--today-bg); border-color: var(--today-border); }
+
+/* Progress bar */
+.day-bar { width: 4px; flex-shrink: 0; position: relative; margin: 6px 0 6px 4px; border-radius: 2px; overflow: hidden; }
+.day-bar-track { position: absolute; inset: 0; background: var(--border); border-radius: 2px; }
+.day-bar-seg { position: absolute; left: 0; right: 0; background: var(--bar-fill-booked); border-radius: 2px; }
+
+/* Cell content */
+.day-content { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 6px 3px 5px; gap: 1px; min-width: 0; overflow: hidden; }
+.day-num { font-size: 12px; font-weight: 400; color: var(--text); line-height: 1; flex-shrink: 0; }
+.wx-icon { font-size: 14px; line-height: 1; flex-shrink: 0; }
+.wx-temp { font-size: 9px; font-weight: 300; color: var(--muted); line-height: 1; flex-shrink: 0; }
+.client-row { display: flex; flex-direction: column; align-items: center; width: 100%; flex-shrink: 0; }
+.client-time { font-size: 7.5px; color: var(--muted); line-height: 1.1; letter-spacing: 0.02em; white-space: nowrap; }
+.client-name { font-size: 8.5px; font-weight: 500; color: var(--booked-dot); line-height: 1.15; text-align: center; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 2px; }
+.multi-badge { font-size: 7.5px; color: var(--muted); line-height: 1; flex-shrink: 0; }
+
+/* Legend */
+.legend { display: flex; gap: 20px; padding: 12px 20px; border-top: 1px solid var(--border); }
+.legend-item { display: flex; align-items: center; gap: 7px; font-size: 10px; letter-spacing: 0.07em; color: var(--hint); text-transform: uppercase; }
+.legend-swatch { width: 10px; height: 10px; border-radius: 2px; border: 1px solid; flex-shrink: 0; }
+
+/* Sheet */
+.backdrop { display: none; position: fixed; inset: 0; background: rgba(26,25,22,0.3); z-index: 100; backdrop-filter: blur(1px); }
+.backdrop.open { display: block; }
+.sheet { position: fixed; bottom: 0; left: 0; right: 0; background: var(--white); border-top: 1px solid var(--border); border-radius: 12px 12px 0 0; z-index: 101; max-width: 680px; margin: 0 auto; transform: translateY(100%); transition: transform 0.32s cubic-bezier(0.32,0.72,0,1); max-height: 90dvh; display: flex; flex-direction: column; }
+.sheet.open { transform: translateY(0); }
+.sheet-handle { width: 32px; height: 3px; background: var(--border2); border-radius: 2px; margin: 12px auto 0; flex-shrink: 0; }
+
+.sheet-header { padding: 16px 28px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; }
+.sheet-date { font-family: var(--serif); font-size: 26px; font-weight: 300; letter-spacing: -0.01em; color: var(--text); line-height: 1.1; }
+.sheet-date em { font-style: italic; }
+.sheet-wx { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.sheet-wx-icon { font-size: 16px; line-height: 1; }
+.sheet-wx-text { font-size: 11px; font-weight: 300; color: var(--muted); letter-spacing: 0.04em; }
+.sheet-close { position: absolute; top: 16px; right: 20px; background: var(--stone); border: 1px solid var(--border2); border-radius: 50%; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: all 0.15s; }
+.sheet-close:hover { background: var(--border); color: var(--text); }
+.sheet-body { overflow-y: auto; flex: 1; }
+
+/* ── Time grid ── */
+.time-grid { display: flex; gap: 0; padding: 16px 20px 32px 20px; }
+
+.time-labels { display: flex; flex-direction: column; width: 44px; flex-shrink: 0; }
+.time-label { font-size: 9px; font-weight: 400; color: var(--hint); letter-spacing: 0.04em; text-align: right; padding-right: 8px; line-height: 1; flex-shrink: 0; display: flex; align-items: flex-start; }
+
+.time-track-wrap { flex: 1; position: relative; min-width: 0; }
+.time-track { position: relative; width: 100%; }
+.hour-row { border-top: 1px solid var(--border); position: relative; }
+.hour-row:last-child { border-bottom: 1px solid var(--border); }
+
+.hour-wx { position: absolute; right: 4px; top: 3px; display: flex; align-items: center; gap: 3px; pointer-events: none; z-index: 1; }
+.hour-wx-icon { font-size: 10px; line-height: 1; }
+.hour-wx-temp { font-size: 9px; font-weight: 300; color: var(--hint); letter-spacing: 0.02em; font-family: var(--sans); }
+
+/* Booking block */
+.booking-block {
+  position: absolute;
+  left: 6px; right: 36px;
+  background: var(--booked-bg);
+  border: 1px solid var(--booked-border);
+  border-left: 3px solid var(--booked-dot);
+  border-radius: 3px;
+  padding: 4px 8px;
+  overflow: hidden;
+  z-index: 2;
+}
+.bb-header { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; line-height: 1.2; }
+.bb-time { font-size: 9px; font-weight: 500; color: var(--booked-dot); letter-spacing: 0.04em; white-space: nowrap; flex-shrink: 0; }
+.bb-name { font-family: var(--serif); font-size: 14px; font-weight: 300; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bb-service { font-size: 8.5px; font-weight: 400; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+
+/* Available */
+.avail-state { padding: 20px 28px 36px; display: flex; flex-direction: column; gap: 6px; }
+.avail-label { font-size: 10px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--hint); }
+.avail-text { font-family: var(--serif); font-size: 20px; font-weight: 300; font-style: italic; color: var(--muted); }
+
+/* Mobile */
+@media (max-width: 480px) {
+  .day-cell { height: 64px; }
+  .day-bar { width: 3px; margin: 4px 0 4px 3px; }
+  .day-content { padding: 5px 2px 4px; }
+  .header { padding: 28px 18px 16px; }
+  .month-heading { font-size: 30px; }
+  .cal-wrap { padding: 16px 12px 12px; }
+  .app { max-width: 100%; }
+  .time-grid { padding: 14px 14px 28px 14px; }
+  .time-labels { width: 36px; }
+  .sheet-header { padding: 14px 18px 12px; }
+  .sheet-date { font-size: 22px; }
+  .booking-block { right: 32px; }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning svg { animation: spin 0.7s linear infinite; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div>
+        <div class="studio-label">Studio Calendar</div>
+        <div class="month-heading" id="month-heading"><em>May</em> 2026</div>
+      </div>
+      <div class="header-actions">
+        <div class="month-nav">
+          <button onclick="changeMonth(-1)" aria-label="Previous">&#8249;</button>
+          <div class="sep"></div>
+          <button onclick="changeMonth(1)" aria-label="Next">&#8250;</button>
+        </div>
+        <button class="icon-btn" id="refresh-btn" onclick="loadAll(true)" aria-label="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="location-row">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      Boston, MA &nbsp;·&nbsp; Weather updated daily
+    </div>
+  </div>
+
+  <div class="cal-wrap">
+    <div class="dow-row">
+      <div class="dow-label">Sun</div><div class="dow-label">Mon</div><div class="dow-label">Tue</div>
+      <div class="dow-label">Wed</div><div class="dow-label">Thu</div><div class="dow-label">Fri</div><div class="dow-label">Sat</div>
+    </div>
+    <div class="cal-grid" id="cal-grid">
+      <div style="grid-column:1/-1;text-align:center;padding:24px 0;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:var(--hint);">Loading…</div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--booked-bg);border-color:var(--booked-border);"></div>Booked</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:var(--today-bg);border-color:var(--today-border);"></div>Today</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:transparent;border-color:var(--border2);"></div>Available</div>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop" onclick="closeSheet()"></div>
+<div class="sheet" id="day-sheet" role="dialog" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <div class="sheet-header">
+    <div class="sheet-date" id="sheet-date">—</div>
+    <div class="sheet-wx">
+      <div class="sheet-wx-icon" id="sheet-wx-icon"></div>
+      <div class="sheet-wx-text" id="sheet-wx-text"></div>
+    </div>
+    <button class="sheet-close" onclick="closeSheet()" aria-label="Close">✕</button>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG — no secrets here, token lives in Vercel env vars
+// ═══════════════════════════════════════════════════════════
+const DAY_START_HOUR = 8;
+const DAY_END_HOUR   = 20;
+const HOUR_H         = 44;
+// ═══════════════════════════════════════════════════════════
+
+const LAT = 42.3601, LON = -71.0589;
+
+const WMO_ICON  = {0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌧️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',77:'🌨️',80:'🌦️',81:'🌦️',82:'🌦️',85:'🌨️',86:'🌨️',95:'⛈️',96:'⛈️',99:'⛈️'};
+const WMO_LABEL = {0:'Clear skies',1:'Mostly clear',2:'Partly cloudy',3:'Overcast',45:'Foggy',48:'Foggy',51:'Light drizzle',53:'Drizzle',55:'Drizzle',61:'Light rain',63:'Rain',65:'Heavy rain',71:'Light snow',73:'Snow',75:'Heavy snow',77:'Snow grains',80:'Showers',81:'Showers',82:'Heavy showers',85:'Snow showers',86:'Snow showers',95:'Thunderstorm',96:'Thunderstorm',99:'Thunderstorm'};
+
+let curDate = new Date();
+let wxCache = {}, bookingCache = {}, activeDay = null;
+
+const fmt      = d => d.toISOString().split('T')[0];
+const monthKey = () => `${curDate.getFullYear()}-${curDate.getMonth()}`;
+
+function monthBounds() {
+  const y = curDate.getFullYear(), m = curDate.getMonth();
+  return [fmt(new Date(y, m, 1)), fmt(new Date(y, m + 1, 0))];
+}
+
+// ── Time helpers ─────────────────────────────────────────
+function toETHour(utcIso) {
+  if (!utcIso) return null;
+  const d = new Date(utcIso);
+  const s = d.toLocaleString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit', hour12: false });
+  const [h, m] = s.split(':').map(Number);
+  return h + m / 60;
+}
+
+function fmtTimeET(utcIso) {
+  if (!utcIso) return '';
+  return new Date(utcIso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' });
+}
+
+function getDateKey(ds) { return ds ? ds.split('T')[0] : ''; }
+function firstName(name) { return (!name || name === '—') ? name : name.split(' ')[0]; }
+function svcName(svc) { return svc ? (typeof svc === 'object' ? svc.name : svc) : ''; }
+
+// ── Weather — daily ───────────────────────────────────────
+let _dailyCache = null, _dailyCacheDay = null;
+
+async function _fetchForecastDaily(force) {
+  const today = fmt(new Date());
+  if (!force && _dailyCache && _dailyCacheDay === today) return _dailyCache;
+  try {
+    const r = await fetch(
+      'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=' + LAT + '&longitude=' + LON +
+      '&daily=weathercode,temperature_2m_max' +
+      '&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=16'
+    );
+    const d = await r.json();
+    _dailyCache = {};
+    if (d.daily) d.daily.time.forEach((t, i) => {
+      _dailyCache[t] = { code: d.daily.weathercode[i], hi: Math.round(d.daily.temperature_2m_max[i]) };
+    });
+    _dailyCacheDay = today;
+  } catch (e) { console.warn('Daily forecast error', e); _dailyCache = _dailyCache || {}; }
+  return _dailyCache;
+}
+
+async function fetchWeather(force) {
+  const [start, end] = monthBounds();
+  const key = monthKey();
+  if (!force && wxCache[key]) return wxCache[key];
+  const fc = await _fetchForecastDaily(force);
+  const result = {};
+  Object.entries(fc).forEach(([date, val]) => {
+    if (date >= start && date <= end) result[date] = val;
+  });
+  wxCache[key] = result;
+  return result;
+}
+
+// ── Weather — hourly ──────────────────────────────────────
+let _hourlyFullCache = null, _hourlyFullDay = null;
+
+async function _fetchForecastHourly(force) {
+  const today = fmt(new Date());
+  if (!force && _hourlyFullCache && _hourlyFullDay === today) return _hourlyFullCache;
+  try {
+    const r = await fetch(
+      'https://api.open-meteo.com/v1/forecast' +
+      '?latitude=' + LAT + '&longitude=' + LON +
+      '&hourly=temperature_2m,weathercode' +
+      '&temperature_unit=fahrenheit&timezone=America%2FNew_York&forecast_days=16'
+    );
+    const d = await r.json();
+    _hourlyFullCache = {};
+    if (d.hourly) d.hourly.time.forEach((t, i) => {
+      const [ds, ts] = t.split('T');
+      const h = parseInt(ts.split(':')[0], 10);
+      if (!_hourlyFullCache[ds]) _hourlyFullCache[ds] = {};
+      _hourlyFullCache[ds][h] = { code: d.hourly.weathercode[i], temp: Math.round(d.hourly.temperature_2m[i]) };
+    });
+    _hourlyFullDay = today;
+  } catch (e) { console.warn('Hourly forecast error', e); _hourlyFullCache = _hourlyFullCache || {}; }
+  return _hourlyFullCache;
+}
+
+async function fetchHourlyWeather(dateStr) {
+  const full = await _fetchForecastHourly(false);
+  return full[dateStr] || {};
+}
+
+// ── Bookings — via /api/bookings (token stays server-side) ─
+async function fetchBookings(force) {
+  const [start, end] = monthBounds();
+  const key = monthKey();
+  if (!force && bookingCache[key]) return bookingCache[key];
+  try {
+    const r = await fetch(`/api/bookings?start=${start}&end=${end}`);
+    if (!r.ok) throw new Error(`API error ${r.status}`);
+    const d = await r.json();
+    if (!d.records) return {};
+    const byDate = {};
+    d.records.forEach(rec => {
+      const dk = getDateKey(rec.fields['Date']);
+      if (!dk) return;
+      if (!byDate[dk]) byDate[dk] = [];
+      const startHour = toETHour(rec.fields['Date']);
+      const durSecs   = rec.fields['Duration'] || 0;
+      byDate[dk].push({
+        name: rec.fields['Payee Name'] || '—',
+        date: rec.fields['Date'],
+        startHour,
+        endHour: startHour !== null ? startHour + durSecs / 3600 : null,
+        duration: durSecs,
+        service: rec.fields['Service'],
+        location: rec.fields['Location'],
+        status: rec.fields['Status']
+      });
+    });
+    Object.values(byDate).forEach(arr => arr.sort((a, b) => (a.startHour || 0) - (b.startHour || 0)));
+    bookingCache[key] = byDate;
+    return byDate;
+  } catch (e) { console.warn('Bookings API error', e); return {}; }
+}
+
+// ── Progress bar ──────────────────────────────────────────
+function barSegments(bookings) {
+  const span = DAY_END_HOUR - DAY_START_HOUR;
+  return bookings.map(b => {
+    if (b.startHour === null) return null;
+    const s = Math.max(b.startHour, DAY_START_HOUR);
+    const e = Math.min(b.endHour ?? (b.startHour + 1), DAY_END_HOUR);
+    if (s >= e) return null;
+    return {
+      top:    (((s - DAY_START_HOUR) / span) * 100).toFixed(1),
+      height: (((e - s)              / span) * 100).toFixed(1)
+    };
+  }).filter(Boolean);
+}
+
+// ── Render ────────────────────────────────────────────────
+function updateHeader() {
+  const month = curDate.toLocaleDateString('en-US', { month: 'long' });
+  document.getElementById('month-heading').innerHTML = `<em>${month}</em> ${curDate.getFullYear()}`;
+}
+
+function renderGrid(wx, bookings) {
+  const y = curDate.getFullYear(), m = curDate.getMonth();
+  const today    = fmt(new Date());
+  const firstDow = new Date(y, m, 1).getDay();
+  const days     = new Date(y, m + 1, 0).getDate();
+  let html = '';
+
+  for (let i = 0; i < firstDow; i++) html += '<div class="day-cell empty"></div>';
+
+  for (let d = 1; d <= days; d++) {
+    const ds  = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const w   = wx[ds];
+    const bk  = bookings[ds] || [];
+    const cls = ['day-cell', ds === today ? 'is-today' : '', bk.length ? 'has-booking' : ''].filter(Boolean).join(' ');
+
+    let barHtml = '';
+    if (bk.length) {
+      const segs = barSegments(bk);
+      barHtml = `<div class="day-bar"><div class="day-bar-track"></div>${segs.map(s => `<div class="day-bar-seg" style="top:${s.top}%;height:${s.height}%;"></div>`).join('')}</div>`;
+    }
+
+    const wxHtml = (w && w.hi !== 0) ? `<div class="wx-icon">${WMO_ICON[w.code]||'🌡️'}</div><div class="wx-temp">${w.hi}°F</div>` : '';
+
+    let clientHtml = '';
+    if (bk.length) {
+      const first = bk[0];
+      const t = first.startHour !== null
+        ? new Date(first.date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' })
+        : '';
+      clientHtml = `<div class="client-row">${t ? `<div class="client-time">${t}</div>` : ''}<div class="client-name">${firstName(first.name)}</div></div>`;
+      if (bk.length > 1) clientHtml += `<div class="multi-badge">+${bk.length - 1}</div>`;
+    }
+
+    html += `<div class="${cls}" onclick="openDay('${ds}')" role="button" aria-label="${ds}">
+      ${barHtml}
+      <div class="day-content">
+        <div class="day-num">${d}</div>
+        ${wxHtml}
+        ${clientHtml}
+      </div>
+    </div>`;
+  }
+
+  document.getElementById('cal-grid').innerHTML = html;
+}
+
+// ── Day sheet ─────────────────────────────────────────────
+async function openDay(ds) {
+  activeDay = ds;
+  const wx  = wxCache[monthKey()] || {};
+  const bks = bookingCache[monthKey()] || {};
+  const w   = wx[ds];
+  const bk  = bks[ds] || [];
+
+  const date    = new Date(ds + 'T12:00:00');
+  const weekday = date.toLocaleDateString('en-US', { weekday: 'long' });
+  const rest    = date.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+
+  document.getElementById('sheet-date').innerHTML = `<em>${weekday}</em>, ${rest}`;
+  const hasWx = w && w.hi !== 0;
+  document.getElementById('sheet-wx-icon').textContent = hasWx ? (WMO_ICON[w.code] || '🌡️') : '';
+  document.getElementById('sheet-wx-text').textContent  = hasWx ? `${w.hi}\u00b0F  \u00b7  ${WMO_LABEL[w.code] || ''}` : '';
+
+  if (bk.length === 0) {
+    document.getElementById('sheet-body').innerHTML = `
+      <div class="avail-state">
+        <div class="avail-label">Availability</div>
+        <div class="avail-text">Open for bookings</div>
+      </div>`;
+  } else {
+    document.getElementById('sheet-body').innerHTML = buildTimeGrid(bk, {});
+    const hourly = await fetchHourlyWeather(ds);
+    if (activeDay === ds) {
+      document.getElementById('sheet-body').innerHTML = buildTimeGrid(bk, hourly);
+    }
+  }
+
+  document.getElementById('backdrop').classList.add('open');
+  document.getElementById('day-sheet').classList.add('open');
+}
+
+function buildTimeGrid(bookings, hourly) {
+  const totalHours  = DAY_END_HOUR - DAY_START_HOUR;
+  const totalHeight = totalHours * HOUR_H;
+  const span        = totalHours;
+
+  let labelsHtml = '', rowsHtml = '';
+  for (let h = DAY_START_HOUR; h <= DAY_END_HOUR; h++) {
+    const label = new Date(2000, 0, 1, h).toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+    labelsHtml += `<div class="time-label" style="height:${HOUR_H}px;">${label}</div>`;
+    if (h < DAY_END_HOUR) {
+      const hw = hourly[h];
+      const wxBadge = (hw && hw.temp !== 0)
+        ? `<div class="hour-wx"><span class="hour-wx-icon">${WMO_ICON[hw.code] || ''}</span><span class="hour-wx-temp">${hw.temp}°</span></div>`
+        : '';
+      rowsHtml += `<div class="hour-row" style="height:${HOUR_H}px;">${wxBadge}</div>`;
+    }
+  }
+
+  const blocksHtml = bookings.map(b => {
+    if (b.startHour === null) return '';
+    const s = Math.max(b.startHour, DAY_START_HOUR);
+    const e = Math.min(b.endHour ?? (b.startHour + 1), DAY_END_HOUR);
+    if (s >= e) return '';
+    const top    = ((s - DAY_START_HOUR) / span) * totalHeight;
+    const height = Math.max(((e - s) / span) * totalHeight, 30);
+    const startStr  = fmtTimeET(b.date);
+    const endDate   = b.duration ? new Date(new Date(b.date).getTime() + b.duration * 1000) : null;
+    const endStr    = endDate ? endDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/New_York' }) : '';
+    const timeRange = endStr ? `${startStr} – ${endStr}` : startStr;
+    const svc = svcName(b.service);
+    return `<div class="booking-block" style="top:${top.toFixed(1)}px;height:${height.toFixed(1)}px;">
+      <div class="bb-header">
+        <span class="bb-time">${timeRange}</span>
+        <span class="bb-name">${b.name}</span>
+        ${svc ? `<span class="bb-service">${svc}</span>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+
+  return `<div class="time-grid">
+    <div class="time-labels">${labelsHtml}</div>
+    <div class="time-track-wrap">
+      <div class="time-track" style="height:${totalHeight}px;">
+        ${rowsHtml}
+        ${blocksHtml}
+      </div>
+    </div>
+  </div>`;
+}
+
+function closeSheet() {
+  activeDay = null;
+  document.getElementById('backdrop').classList.remove('open');
+  document.getElementById('day-sheet').classList.remove('open');
+}
+
+function changeMonth(dir) {
+  curDate = new Date(curDate.getFullYear(), curDate.getMonth() + dir, 1);
+  closeSheet();
+  loadAll();
+}
+
+async function loadAll(force = false) {
+  const btn = document.getElementById('refresh-btn');
+  btn.classList.add('spinning');
+  updateHeader();
+  const [wx, bookings] = await Promise.all([fetchWeather(force), fetchBookings(force)]);
+  renderGrid(wx, bookings);
+  btn.classList.remove('spinning');
+  if (activeDay) openDay(activeDay);
+}
+
+let ty0 = 0;
+const sheet = document.getElementById('day-sheet');
+sheet.addEventListener('touchstart', e => { ty0 = e.touches[0].clientY; }, { passive: true });
+sheet.addEventListener('touchend',   e => { if (e.changedTouches[0].clientY - ty0 > 55) closeSheet(); }, { passive: true });
+
+loadAll();
+</script>
+</body>
+</html>
